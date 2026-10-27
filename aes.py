@@ -140,10 +140,22 @@ def pad(data_bytes):
     return data_bytes + bytearray([padding_len] * padding_len)
 
 def unpad(data_bytes):
+    if not data_bytes:
+        raise ValueError("Data byte kosong.")
+
     padding_len = data_bytes[-1]
+
+    if padding_len < 1 or padding_len > 16 or len(data_bytes) < padding_len:
+        raise ValueError("Padding tidak valid (master/session key tidak cocok).")
+    for i in range(len(data_bytes) - padding_len, len(data_bytes)):
+        if data_bytes[i] != padding_len:
+            raise ValueError("Padding tidak valid (master/session key tidak cocok).")
     return data_bytes[:-padding_len]
 
 def aes_encrypt(plaintext_ascii, key_ascii):
+    if not plaintext_ascii.isascii():
+        raise ValueError("Pesan mengandung karakter non-ASCII.")
+    
     key_bytes = key_ascii.encode('ascii').ljust(16, b'\0')[:16]
     pt_bytes = pad(plaintext_ascii.encode('ascii'))
     key_schedule = key_expansion(key_bytes)
@@ -155,15 +167,20 @@ def aes_encrypt(plaintext_ascii, key_ascii):
     return ciphertext.hex()
 
 def aes_decrypt(ciphertext_hex, key_ascii):
-    key_bytes = key_ascii.encode('ascii').ljust(16, b'\0')[:16]
-    ct_bytes = bytearray.fromhex(ciphertext_hex)
-    key_schedule = key_expansion(key_bytes)
-    
-    plaintext = bytearray()
-    for i in range(0, len(ct_bytes), 16):
-        block = ct_bytes[i:i+16]
-        plaintext.extend(decrypt_block(block, key_schedule))
-    return unpad(plaintext).decode('ascii')
+    try:
+        key_bytes = key_ascii.encode('ascii').ljust(16, b'\0')[:16]
+        ct_bytes = bytearray.fromhex(ciphertext_hex)
+        key_schedule = key_expansion(key_bytes)
+        
+        plaintext = bytearray()
+        for i in range(0, len(ct_bytes), 16):
+            block = ct_bytes[i:i+16]
+            plaintext.extend(decrypt_block(block, key_schedule))
+        
+        unpadded = unpad(plaintext)
+        return unpadded.decode('ascii')
+    except (ValueError, UnicodeDecodeError) as e:
+        raise ValueError("Gagal mendekripsi: Master key/Session key tidak cocok.") from e
 
 # ==========================================
 # 4. UTILITAS SOCKET JARINGAN
