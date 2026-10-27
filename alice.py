@@ -10,8 +10,9 @@ def chat_listener(sock, session_key):
         try:
             ct_hex = recv_msg(sock).decode()
             if not ct_hex: break
+            print(f"\n  [<- Ciphertext Masuk (Hex)]: {ct_hex}")
             pt = aes_decrypt(ct_hex, session_key)
-            print(f"\n[Bob]: {pt}\n[Alice (You)]: ", end="")
+            print(f"[Bob]: {pt}\n[Alice (You)]: ", end="", flush=True)
         except Exception:
             print("\n[Alice] Koneksi terputus.")
             break
@@ -67,7 +68,9 @@ def start_alice(kdc_ip='127.0.0.1', kdc_port=5000, bob_ip='127.0.0.1', bob_port=
     threading.Thread(target=chat_listener, args=(bob_conn, session_key), daemon=True).start()
     while True:
         msg = input("[Alice (You)]: ")
-        send_msg(bob_conn, aes_encrypt(msg, session_key).encode())
+        ct_hex = aes_encrypt(msg, session_key)
+        print(f"  [-> Ciphertext Keluar (Hex)]: {ct_hex}")
+        send_msg(bob_conn, ct_hex.encode())
 
 if __name__ == "__main__":
     KDC_IP = '127.0.0.1' 

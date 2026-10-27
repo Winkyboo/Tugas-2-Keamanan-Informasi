@@ -9,8 +9,9 @@ def chat_listener(sock, session_key):
         try:
             ct_hex = recv_msg(sock).decode()
             if not ct_hex: break
+            print(f"\n  [<- Ciphertext Masuk (Hex)]: {ct_hex}")
             pt = aes_decrypt(ct_hex, session_key)
-            print(f"\n[Alice]: {pt}\n[Bob (You)]: ", end="")
+            print(f"[Alice]: {pt}\n[Bob (You)]: ", end="", flush=True)
         except Exception:
             print("\n[Bob] Koneksi terputus.")
             break
@@ -51,7 +52,9 @@ def start_bob(ip='0.0.0.0', port=6000):
     threading.Thread(target=chat_listener, args=(conn, session_key), daemon=True).start()
     while True:
         msg = input("[Bob (You)]: ")
-        send_msg(conn, aes_encrypt(msg, session_key).encode())
+        ct_hex = aes_encrypt(msg, session_key)
+        print(f"  [-> Ciphertext Keluar (Hex)]: {ct_hex}")
+        send_msg(conn, ct_hex.encode())
 
 if __name__ == "__main__":
     # ini buat pakai range localhost
